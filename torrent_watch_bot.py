@@ -141,36 +141,57 @@ def check_feeds():
     if not watchlist:
         return
 
+    notified_items = []
+
     normalized_watchlist = [
         (item, normalize(item)) for item in watchlist
     ]
 
-    for rss_url in RSS_URLS:
-        feed = feedparser.parse(rss_url)
+    for original_query, normalized_query in normalized_watchlist:
+        if not normalized_query:
+            continue
 
-        for entry in feed.entries:
-            title = entry.get("title", "")
-            link = entry.get("link", "")
+        already_notified_key = "NOTIFIED|" + original_query
 
-            item_id = title + "|" + link
+        if already_notified_key in seen:
+            continue
 
-            if item_id in seen:
-                continue
+        for rss_url in RSS_URLS:
+            feed = feedparser.parse(rss_url)
 
-            searchable_text = normalize(title + " " + link)
+            found_entry = None
 
-            for original_query, normalized_query in normalized_watchlist:
-                if normalized_query and normalized_query in searchable_text:
-                    send_message(
-                        f"Found match 🎬\n\n"
-                        f"Watching for: {original_query}\n\n"
-                        f"{title}\n{link}"
-                    )
+            for entry in feed.entries:
+                title = entry.get("title", "")
+                link = entry.get("link", "")
 
-                    seen.append(item_id)
-                    save_json(SEEN_FILE, seen)
+                searchable_text = normalize(title + " " + link)
+
+                if normalized_query in searchable_text:
+                    found_entry = {
+                        "title": title,
+                        "link": link
+                    }
                     break
 
+            if found_entry:
+                send_message(
+                    f"Available now 🎬\n\n"
+                    f"{original_query}\n\n"
+                    f"Found source:\n{found_entry['title']}\n{found_entry['link']}"
+                )
+
+                seen.append(already_notified_key)
+                notified_items.append(original_query)
+                save_json(SEEN_FILE, seen)
+                break
+
+    if notified_items:
+        watchlist = [
+            item for item in watchlist
+            if item not in notified_items
+        ]
+        save_json(WATCHLIST_FILE, watchlist)
 
 def main():
     handle_commands()
