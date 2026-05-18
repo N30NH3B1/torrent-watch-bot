@@ -109,7 +109,12 @@ def make_watch_item(raw_query):
 
         if movie:
             return movie
-
+        
+        send_message(
+            f"I could not look up this IMDb code via OMDb:\n{raw_query}\n\n"
+            f"I added the code anyway, but title matching may not work."
+        )
+        
         return {
             "imdb_id": raw_query.lower(),
             "title": raw_query.lower(),
