@@ -7,6 +7,7 @@ import subprocess
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
+
 OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
 TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "")
 
@@ -79,91 +80,6 @@ def lookup_imdb(imdb_id):
     if not OMDB_API_KEY:
         return None
 
-def tmdb_headers():
-    return {
-        "Authorization": f"Bearer {TMDB_TOKEN}",
-        "accept": "application/json"
-    }
-
-
-def lookup_tmdb_by_imdb_id(imdb_id):
-    if not TMDB_TOKEN:
-        return None
-
-    response = requests.get(
-        f"https://api.themoviedb.org/3/find/{imdb_id}",
-        headers=tmdb_headers(),
-        params={"external_source": "imdb_id"},
-        timeout=20
-    )
-
-    response.raise_for_status()
-    data = response.json()
-
-    results = data.get("movie_results", []) or data.get("tv_results", [])
-
-    if not results:
-        return None
-
-    result = results[0]
-    media_type = "movie" if data.get("movie_results") else "series"
-
-    title = result.get("title") or result.get("name")
-    date = result.get("release_date") or result.get("first_air_date") or ""
-    year = date[:4] if date else None
-
-    return {
-        "imdb_id": imdb_id.lower(),
-        "tmdb_id": result.get("id"),
-        "type": media_type,
-        "title": title,
-        "year": year,
-        "display": f"{title} ({year})" if year else title
-    }
-
-
-def search_tmdb_by_title_year(title, year=None):
-    if not TMDB_TOKEN:
-        return None
-
-    response = requests.get(
-        "https://api.themoviedb.org/3/search/multi",
-        headers=tmdb_headers(),
-        params={
-            "query": title,
-            "year": year or "",
-            "include_adult": "false"
-        },
-        timeout=20
-    )
-
-    response.raise_for_status()
-    data = response.json()
-
-    results = [
-        item for item in data.get("results", [])
-        if item.get("media_type") in ["movie", "tv"]
-    ]
-
-    if not results:
-        return None
-
-    result = results[0]
-    media_type = "movie" if result.get("media_type") == "movie" else "series"
-
-    clean_title = result.get("title") or result.get("name")
-    date = result.get("release_date") or result.get("first_air_date") or ""
-    found_year = date[:4] if date else year
-
-    return {
-        "imdb_id": None,
-        "tmdb_id": result.get("id"),
-        "type": media_type,
-        "title": clean_title,
-        "year": found_year,
-        "display": f"{clean_title} ({found_year})" if found_year else clean_title
-    }
-
     response = requests.get(
         "https://www.omdbapi.com/",
         params={
@@ -187,9 +103,112 @@ def search_tmdb_by_title_year(title, year=None):
 
     return {
         "imdb_id": imdb_id.lower(),
+        "tmdb_id": None,
+        "type": "movie",
         "title": title,
         "year": year,
         "display": f"{title} ({year})" if year else title
+    }
+
+
+def tmdb_headers():
+    return {
+        "Authorization": f"Bearer {TMDB_TOKEN}",
+        "accept": "application/json"
+    }
+
+
+def lookup_tmdb_by_imdb_id(imdb_id):
+    if not TMDB_TOKEN:
+        return None
+
+    response = requests.get(
+        f"https://api.themoviedb.org/3/find/{imdb_id}",
+        headers=tmdb_headers(),
+        params={"external_source": "imdb_id"},
+        timeout=20
+    )
+
+    response.raise_for_status()
+    data = response.json()
+
+    movie_results = data.get("movie_results", [])
+    tv_results = data.get("tv_results", [])
+
+    if movie_results:
+        result = movie_results[0]
+        media_type = "movie"
+    elif tv_results:
+        result = tv_results[0]
+        media_type = "series"
+    else:
+        return None
+
+    title = result.get("title") or result.get("name")
+    date = result.get("release_date") or result.get("first_air_date") or ""
+    year = date[:4] if date else None
+
+    if not title:
+        return None
+
+    return {
+        "imdb_id": imdb_id.lower(),
+        "tmdb_id": result.get("id"),
+        "type": media_type,
+        "title": title,
+        "year": year,
+        "display": f"{title} ({year})" if year else title
+    }
+
+
+def search_tmdb_by_title_year(title, year=None):
+    if not TMDB_TOKEN:
+        return None
+
+    params = {
+        "query": title,
+        "include_adult": "false"
+    }
+
+    if year:
+        params["year"] = year
+        params["first_air_date_year"] = year
+
+    response = requests.get(
+        "https://api.themoviedb.org/3/search/multi",
+        headers=tmdb_headers(),
+        params=params,
+        timeout=20
+    )
+
+    response.raise_for_status()
+    data = response.json()
+
+    results = [
+        item for item in data.get("results", [])
+        if item.get("media_type") in ["movie", "tv"]
+    ]
+
+    if not results:
+        return None
+
+    result = results[0]
+    media_type = "movie" if result.get("media_type") == "movie" else "series"
+
+    clean_title = result.get("title") or result.get("name")
+    date = result.get("release_date") or result.get("first_air_date") or ""
+    found_year = date[:4] if date else year
+
+    if not clean_title:
+        return None
+
+    return {
+        "imdb_id": None,
+        "tmdb_id": result.get("id"),
+        "type": media_type,
+        "title": clean_title,
+        "year": found_year,
+        "display": f"{clean_title} ({found_year})" if found_year else clean_title
     }
 
 
@@ -199,17 +218,15 @@ def make_watch_item(raw_query, notify_on_lookup_failure=False):
     if is_imdb_id(raw_query):
         imdb_id = raw_query.lower()
 
-        movie = lookup_tmdb_by_imdb_id(imdb_id)
+        item = lookup_tmdb_by_imdb_id(imdb_id)
 
-        if movie:
-            return movie
+        if item:
+            return item
 
-        movie = lookup_imdb(imdb_id)
+        item = lookup_imdb(imdb_id)
 
-        if movie:
-            movie["type"] = "movie"
-            movie["tmdb_id"] = None
-            return movie
+        if item:
+            return item
 
         if notify_on_lookup_failure:
             send_message(
@@ -229,10 +246,10 @@ def make_watch_item(raw_query, notify_on_lookup_failure=False):
 
     title, year = parse_title_and_year(raw_query)
 
-    movie = search_tmdb_by_title_year(title, year)
+    item = search_tmdb_by_title_year(title, year)
 
-    if movie:
-        return movie
+    if item:
+        return item
 
     display = f"{title} ({year})" if year else title
 
@@ -266,6 +283,9 @@ def save_watchlist(watchlist):
 def watch_item_key(item):
     if item.get("imdb_id"):
         return item["imdb_id"]
+
+    if item.get("tmdb_id") and item.get("type"):
+        return f"{item['type']}|tmdb|{item['tmdb_id']}"
 
     key = normalize(item.get("title", ""))
 
