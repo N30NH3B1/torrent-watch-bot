@@ -53,10 +53,6 @@ def send_message(text):
         },
         timeout=20
     )
-    if response.status_code == 401:
-        print("TMDb unauthorized. Check TMDB_TOKEN secret.")
-        return None
-    
     response.raise_for_status()
 
 
@@ -84,35 +80,40 @@ def lookup_imdb(imdb_id):
     if not OMDB_API_KEY:
         return None
 
-    response = requests.get(
-        "https://www.omdbapi.com/",
-        params={
-            "apikey": OMDB_API_KEY,
-            "i": imdb_id
-        },
-        timeout=20
-    )
+    try:
+        response = requests.get(
+            "https://www.omdbapi.com/",
+            params={
+                "apikey": OMDB_API_KEY,
+                "i": imdb_id
+            },
+            timeout=20
+        )
 
-    response.raise_for_status()
-    data = response.json()
+        response.raise_for_status()
+        data = response.json()
 
-    if data.get("Response") != "True":
+        if data.get("Response") != "True":
+            return None
+
+        title = data.get("Title", "").strip()
+        year = data.get("Year", "").strip()
+
+        if not title:
+            return None
+
+        return {
+            "imdb_id": imdb_id.lower(),
+            "tmdb_id": None,
+            "type": "movie",
+            "title": title,
+            "year": year,
+            "display": f"{title} ({year})" if year else title
+        }
+
+    except requests.RequestException as error:
+        print(f"OMDb lookup failed: {error}")
         return None
-
-    title = data.get("Title", "").strip()
-    year = data.get("Year", "").strip()
-
-    if not title:
-        return None
-
-    return {
-        "imdb_id": imdb_id.lower(),
-        "tmdb_id": None,
-        "type": "movie",
-        "title": title,
-        "year": year,
-        "display": f"{title} ({year})" if year else title
-    }
 
 
 def tmdb_headers():
@@ -126,94 +127,112 @@ def lookup_tmdb_by_imdb_id(imdb_id):
     if not TMDB_TOKEN:
         return None
 
-    response = requests.get(
-        f"https://api.themoviedb.org/3/find/{imdb_id}",
-        headers=tmdb_headers(),
-        params={"external_source": "imdb_id"},
-        timeout=20
-    )
+    try:
+        response = requests.get(
+            f"https://api.themoviedb.org/3/find/{imdb_id}",
+            headers=tmdb_headers(),
+            params={"external_source": "imdb_id"},
+            timeout=20
+        )
 
-    response.raise_for_status()
-    data = response.json()
+        if response.status_code == 401:
+            print("TMDb unauthorized. Check TMDB_TOKEN secret.")
+            return None
 
-    movie_results = data.get("movie_results", [])
-    tv_results = data.get("tv_results", [])
+        response.raise_for_status()
+        data = response.json()
 
-    if movie_results:
-        result = movie_results[0]
-        media_type = "movie"
-    elif tv_results:
-        result = tv_results[0]
-        media_type = "series"
-    else:
+        movie_results = data.get("movie_results", [])
+        tv_results = data.get("tv_results", [])
+
+        if movie_results:
+            result = movie_results[0]
+            media_type = "movie"
+        elif tv_results:
+            result = tv_results[0]
+            media_type = "series"
+        else:
+            return None
+
+        title = result.get("title") or result.get("name")
+        date = result.get("release_date") or result.get("first_air_date") or ""
+        year = date[:4] if date else None
+
+        if not title:
+            return None
+
+        return {
+            "imdb_id": imdb_id.lower(),
+            "tmdb_id": result.get("id"),
+            "type": media_type,
+            "title": title,
+            "year": year,
+            "display": f"{title} ({year})" if year else title
+        }
+
+    except requests.RequestException as error:
+        print(f"TMDb IMDb lookup failed: {error}")
         return None
-
-    title = result.get("title") or result.get("name")
-    date = result.get("release_date") or result.get("first_air_date") or ""
-    year = date[:4] if date else None
-
-    if not title:
-        return None
-
-    return {
-        "imdb_id": imdb_id.lower(),
-        "tmdb_id": result.get("id"),
-        "type": media_type,
-        "title": title,
-        "year": year,
-        "display": f"{title} ({year})" if year else title
-    }
 
 
 def search_tmdb_by_title_year(title, year=None):
     if not TMDB_TOKEN:
         return None
 
-    params = {
-        "query": title,
-        "include_adult": "false"
-    }
+    try:
+        params = {
+            "query": title,
+            "include_adult": "false"
+        }
 
-    if year:
-        params["year"] = year
-        params["first_air_date_year"] = year
+        if year:
+            params["year"] = year
+            params["first_air_date_year"] = year
 
-    response = requests.get(
-        "https://api.themoviedb.org/3/search/multi",
-        headers=tmdb_headers(),
-        params=params,
-        timeout=20
-    )
+        response = requests.get(
+            "https://api.themoviedb.org/3/search/multi",
+            headers=tmdb_headers(),
+            params=params,
+            timeout=20
+        )
 
-    response.raise_for_status()
-    data = response.json()
+        if response.status_code == 401:
+            print("TMDb unauthorized. Check TMDB_TOKEN secret.")
+            return None
 
-    results = [
-        item for item in data.get("results", [])
-        if item.get("media_type") in ["movie", "tv"]
-    ]
+        response.raise_for_status()
+        data = response.json()
 
-    if not results:
+        results = [
+            item for item in data.get("results", [])
+            if item.get("media_type") in ["movie", "tv"]
+        ]
+
+        if not results:
+            return None
+
+        result = results[0]
+        media_type = "movie" if result.get("media_type") == "movie" else "series"
+
+        clean_title = result.get("title") or result.get("name")
+        date = result.get("release_date") or result.get("first_air_date") or ""
+        found_year = date[:4] if date else year
+
+        if not clean_title:
+            return None
+
+        return {
+            "imdb_id": None,
+            "tmdb_id": result.get("id"),
+            "type": media_type,
+            "title": clean_title,
+            "year": found_year,
+            "display": f"{clean_title} ({found_year})" if found_year else clean_title
+        }
+
+    except requests.RequestException as error:
+        print(f"TMDb title search failed: {error}")
         return None
-
-    result = results[0]
-    media_type = "movie" if result.get("media_type") == "movie" else "series"
-
-    clean_title = result.get("title") or result.get("name")
-    date = result.get("release_date") or result.get("first_air_date") or ""
-    found_year = date[:4] if date else year
-
-    if not clean_title:
-        return None
-
-    return {
-        "imdb_id": None,
-        "tmdb_id": result.get("id"),
-        "type": media_type,
-        "title": clean_title,
-        "year": found_year,
-        "display": f"{clean_title} ({found_year})" if found_year else clean_title
-    }
 
 
 def make_watch_item(raw_query, notify_on_lookup_failure=False):
