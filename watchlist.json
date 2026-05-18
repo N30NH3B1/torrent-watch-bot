@@ -1,3 +1,14 @@
 [
-  "tt32093575"
+  {
+    "imdb_id": "tt32093575",
+    "title": "Scary Movie",
+    "year": "2026",
+    "display": "Scary Movie (2026)"
+  },
+  {
+    "imdb_id": "tt32612507",
+    "title": "Lee Cronin's the Mummy",
+    "year": "2026",
+    "display": "Lee Cronin's the Mummy (2026)"
+  }
 ]
