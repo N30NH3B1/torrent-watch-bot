@@ -8,6 +8,7 @@ import subprocess
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
 OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
+TMDB_TOKEN = os.environ.get("TMDB_TOKEN", "")
 
 WATCHLIST_FILE = "watchlist.json"
 SEEN_FILE = "seen_matches.json"
