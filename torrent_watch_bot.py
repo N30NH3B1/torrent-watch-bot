@@ -53,6 +53,10 @@ def send_message(text):
         },
         timeout=20
     )
+    if response.status_code == 401:
+        print("TMDb unauthorized. Check TMDB_TOKEN secret.")
+        return None
+    
     response.raise_for_status()
 
 
