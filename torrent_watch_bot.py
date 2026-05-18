@@ -225,7 +225,11 @@ def handle_commands():
 
         elif text == "/list":
             if watchlist:
-                send_message("Current watchlist 🎬\n\n" + "\n".join(watchlist))
+                names = [
+                    item.get("display", item.get("title", "Unknown"))
+                    for item in watchlist
+                ]
+                send_message("Current watchlist 🎬\n\n" + "\n".join(names))
             else:
                 send_message("Your watchlist is empty.")
 
