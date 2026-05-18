@@ -304,18 +304,12 @@ def save_watchlist(watchlist):
 
 
 def watch_item_key(item):
-    if item.get("imdb_id"):
-        return item["imdb_id"]
-
-    if item.get("tmdb_id") and item.get("type"):
-        return f"{item['type']}|tmdb|{item['tmdb_id']}"
-
-    key = normalize(item.get("title", ""))
+    title = normalize(item.get("title", ""))
 
     if item.get("year"):
-        key += "|" + str(item["year"])
+        title += "|" + str(item["year"])
 
-    return key
+    return title
 
 
 def watch_item_display(item):
