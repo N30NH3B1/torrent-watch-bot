@@ -30,4 +30,5 @@ jobs:
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           CHAT_ID: ${{ secrets.CHAT_ID }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
         run: python torrent_watch_bot.py
