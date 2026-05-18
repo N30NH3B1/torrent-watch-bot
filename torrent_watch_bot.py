@@ -35,10 +35,7 @@ def commit_changes(message):
     subprocess.run(["git", "config", "user.email", "github-actions@github.com"], check=True)
     subprocess.run(["git", "add", WATCHLIST_FILE, SEEN_FILE, OFFSET_FILE], check=True)
 
-    result = subprocess.run(
-        ["git", "diff", "--cached", "--quiet"],
-        check=False
-    )
+    result = subprocess.run(["git", "diff", "--cached", "--quiet"], check=False)
 
     if result.returncode != 0:
         subprocess.run(["git", "commit", "-m", message], check=True)
@@ -46,7 +43,7 @@ def commit_changes(message):
 
 
 def send_message(text):
-    requests.post(
+    response = requests.post(
         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
         data={
             "chat_id": CHAT_ID,
@@ -54,10 +51,12 @@ def send_message(text):
         },
         timeout=20
     )
+    response.raise_for_status()
 
 
 def normalize(text):
-    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+    return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
+
 
 def is_imdb_id(text):
     return re.fullmatch(r"tt\d{7,9}", text.strip().lower()) is not None
@@ -88,42 +87,51 @@ def lookup_imdb(imdb_id):
         timeout=20
     )
 
+    response.raise_for_status()
     data = response.json()
 
     if data.get("Response") != "True":
         return None
 
+    title = data.get("Title", "").strip()
+    year = data.get("Year", "").strip()
+
+    if not title:
+        return None
+
     return {
-        "imdb_id": imdb_id,
-        "title": data.get("Title"),
-        "year": data.get("Year"),
-        "display": f"{data.get('Title')} ({data.get('Year')})"
+        "imdb_id": imdb_id.lower(),
+        "title": title,
+        "year": year,
+        "display": f"{title} ({year})" if year else title
     }
 
 
-def make_watch_item(raw_query):
+def make_watch_item(raw_query, notify_on_lookup_failure=False):
     raw_query = raw_query.strip()
 
     if is_imdb_id(raw_query):
-        movie = lookup_imdb(raw_query.lower())
+        imdb_id = raw_query.lower()
+        movie = lookup_imdb(imdb_id)
 
         if movie:
             return movie
-        
-        send_message(
-            f"I could not look up this IMDb code via OMDb:\n{raw_query}\n\n"
-            f"I added the code anyway, but title matching may not work."
-        )
-        
+
+        if notify_on_lookup_failure:
+            send_message(
+                f"I could not look up this IMDb code via OMDb:\n"
+                f"{raw_query}\n\n"
+                f"I added the code anyway, but title matching may not work."
+            )
+
         return {
-            "imdb_id": raw_query.lower(),
-            "title": raw_query.lower(),
+            "imdb_id": imdb_id,
+            "title": imdb_id,
             "year": None,
-            "display": raw_query.lower()
+            "display": imdb_id
         }
 
     title, year = parse_title_and_year(raw_query)
-
     display = f"{title} ({year})" if year else title
 
     return {
@@ -136,16 +144,19 @@ def make_watch_item(raw_query):
 
 def load_watchlist():
     raw = load_json(WATCHLIST_FILE, [])
-
     upgraded = []
 
     for item in raw:
         if isinstance(item, str):
             upgraded.append(make_watch_item(item))
-        else:
+        elif isinstance(item, dict):
             upgraded.append(item)
 
     return upgraded
+
+
+def save_watchlist(watchlist):
+    save_json(WATCHLIST_FILE, watchlist)
 
 
 def watch_item_key(item):
@@ -155,9 +166,13 @@ def watch_item_key(item):
     key = normalize(item.get("title", ""))
 
     if item.get("year"):
-        key += "|" + item["year"]
+        key += "|" + str(item["year"])
 
     return key
+
+
+def watch_item_display(item):
+    return item.get("display") or item.get("title") or item.get("imdb_id") or "Unknown"
 
 
 def watch_item_matches_entry(item, entry):
@@ -173,7 +188,7 @@ def watch_item_matches_entry(item, entry):
     if wanted_title not in searchable_text:
         return False
 
-    if item.get("year") and item["year"] not in searchable_text:
+    if item.get("year") and str(item["year"]) not in searchable_text:
         return False
 
     return True
@@ -203,7 +218,7 @@ def get_updates():
 
 
 def handle_commands():
-    watchlist = load_json(WATCHLIST_FILE, [])
+    watchlist = load_watchlist()
     updates = get_updates()
 
     for update in updates:
@@ -215,43 +230,55 @@ def handle_commands():
             continue
 
         if text.startswith("/watch "):
-            query = text.replace("/watch ", "", 1).strip()
+            raw_query = text.replace("/watch ", "", 1).strip()
 
-            if not query:
-                send_message("Send it like this:\n/watch Nosferatu")
+            if not raw_query:
+                send_message("Send it like this:\n/watch Scary Movie 2000")
                 continue
 
-            if query not in watchlist:
-                watchlist.append(query)
-                save_json(WATCHLIST_FILE, watchlist)
-                send_message(f"Added to watchlist 🎬\n{query}")
+            item = make_watch_item(raw_query, notify_on_lookup_failure=True)
+            existing_keys = [watch_item_key(x) for x in watchlist]
+
+            if watch_item_key(item) not in existing_keys:
+                watchlist.append(item)
+                save_watchlist(watchlist)
+                send_message(f"Added to watchlist 🎬\n{watch_item_display(item)}")
             else:
-                send_message(f"Already watching 👀\n{query}")
+                send_message(f"Already watching 👀\n{watch_item_display(item)}")
 
         elif text == "/list":
             if watchlist:
-                names = [
-                    item.get("display", item.get("title", "Unknown"))
-                    for item in watchlist
-                ]
+                names = [watch_item_display(item) for item in watchlist]
                 send_message("Current watchlist 🎬\n\n" + "\n".join(names))
             else:
                 send_message("Your watchlist is empty.")
 
         elif text.startswith("/remove "):
-            query = text.replace("/remove ", "", 1).strip()
+            raw_query = text.replace("/remove ", "", 1).strip()
 
-            if query in watchlist:
-                watchlist.remove(query)
-                save_json(WATCHLIST_FILE, watchlist)
-                send_message(f"Removed from watchlist 🗑️\n{query}")
+            if not raw_query:
+                send_message("Send it like this:\n/remove Scary Movie 2000")
+                continue
+
+            target_item = make_watch_item(raw_query)
+            target_key = watch_item_key(target_item)
+
+            new_watchlist = [
+                item for item in watchlist
+                if watch_item_key(item) != target_key
+            ]
+
+            if len(new_watchlist) != len(watchlist):
+                save_watchlist(new_watchlist)
+                send_message(f"Removed from watchlist 🗑️\n{watch_item_display(target_item)}")
             else:
-                send_message(f"Not found in watchlist:\n{query}")
+                send_message(f"Not found in watchlist:\n{raw_query}")
 
         elif text == "/help":
             send_message(
                 "Commands:\n"
                 "/watch movie title or IMDb code\n"
+                "/watch movie title year\n"
                 "/list\n"
                 "/remove movie title or IMDb code\n"
                 "/help"
@@ -259,63 +286,56 @@ def handle_commands():
 
 
 def check_feeds():
-    watchlist = load_json(WATCHLIST_FILE, [])
+    watchlist = load_watchlist()
     seen = load_json(SEEN_FILE, [])
 
     if not watchlist:
         return
 
-    notified_items = []
+    notified_keys = []
 
-    normalized_watchlist = [
-        (item, normalize(item)) for item in watchlist
-    ]
-
-    for original_query, normalized_query in normalized_watchlist:
-        if not normalized_query:
-            continue
-
-        already_notified_key = "NOTIFIED|" + original_query
+    for item in watchlist:
+        item_key = watch_item_key(item)
+        already_notified_key = "NOTIFIED|" + item_key
 
         if already_notified_key in seen:
             continue
 
+        found_entry = None
+
         for rss_url in RSS_URLS:
             feed = feedparser.parse(rss_url)
 
-            found_entry = None
-
             for entry in feed.entries:
-                title = entry.get("title", "")
-                link = entry.get("link", "")
-
-                searchable_text = normalize(title + " " + link)
-
-                if normalized_query in searchable_text:
+                if watch_item_matches_entry(item, entry):
                     found_entry = {
-                        "title": title,
-                        "link": link
+                        "title": entry.get("title", ""),
+                        "link": entry.get("link", "")
                     }
                     break
 
             if found_entry:
-                send_message(
-                    f"Available now 🎬\n\n"
-                    f"{original_query}\n\n"
-                    f"Found source:\n{found_entry['title']}\n{found_entry['link']}"
-                )
-
-                seen.append(already_notified_key)
-                notified_items.append(original_query)
-                save_json(SEEN_FILE, seen)
                 break
 
-    if notified_items:
+        if found_entry:
+            send_message(
+                f"Available now 🎬\n\n"
+                f"{watch_item_display(item)}\n\n"
+                f"{found_entry['title']}\n"
+                f"{found_entry['link']}"
+            )
+
+            seen.append(already_notified_key)
+            notified_keys.append(item_key)
+            save_json(SEEN_FILE, seen)
+
+    if notified_keys:
         watchlist = [
             item for item in watchlist
-            if item not in notified_items
+            if watch_item_key(item) not in notified_keys
         ]
-        save_json(WATCHLIST_FILE, watchlist)
+        save_watchlist(watchlist)
+
 
 def main():
     handle_commands()
