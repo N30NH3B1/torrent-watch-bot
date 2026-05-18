@@ -7,6 +7,7 @@ import subprocess
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = os.environ["CHAT_ID"]
+OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
 
 WATCHLIST_FILE = "watchlist.json"
 SEEN_FILE = "seen_matches.json"
@@ -57,6 +58,120 @@ def send_message(text):
 
 def normalize(text):
     return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+
+def is_imdb_id(text):
+    return re.fullmatch(r"tt\d{7,9}", text.strip().lower()) is not None
+
+
+def parse_title_and_year(text):
+    match = re.match(r"^(.*?)(?:\s+(\d{4}))?$", text.strip())
+
+    if not match:
+        return text.strip(), None
+
+    title = match.group(1).strip()
+    year = match.group(2)
+
+    return title, year
+
+
+def lookup_imdb(imdb_id):
+    if not OMDB_API_KEY:
+        return None
+
+    response = requests.get(
+        "https://www.omdbapi.com/",
+        params={
+            "apikey": OMDB_API_KEY,
+            "i": imdb_id
+        },
+        timeout=20
+    )
+
+    data = response.json()
+
+    if data.get("Response") != "True":
+        return None
+
+    return {
+        "imdb_id": imdb_id,
+        "title": data.get("Title"),
+        "year": data.get("Year"),
+        "display": f"{data.get('Title')} ({data.get('Year')})"
+    }
+
+
+def make_watch_item(raw_query):
+    raw_query = raw_query.strip()
+
+    if is_imdb_id(raw_query):
+        movie = lookup_imdb(raw_query.lower())
+
+        if movie:
+            return movie
+
+        return {
+            "imdb_id": raw_query.lower(),
+            "title": raw_query.lower(),
+            "year": None,
+            "display": raw_query.lower()
+        }
+
+    title, year = parse_title_and_year(raw_query)
+
+    display = f"{title} ({year})" if year else title
+
+    return {
+        "imdb_id": None,
+        "title": title,
+        "year": year,
+        "display": display
+    }
+
+
+def load_watchlist():
+    raw = load_json(WATCHLIST_FILE, [])
+
+    upgraded = []
+
+    for item in raw:
+        if isinstance(item, str):
+            upgraded.append(make_watch_item(item))
+        else:
+            upgraded.append(item)
+
+    return upgraded
+
+
+def watch_item_key(item):
+    if item.get("imdb_id"):
+        return item["imdb_id"]
+
+    key = normalize(item.get("title", ""))
+
+    if item.get("year"):
+        key += "|" + item["year"]
+
+    return key
+
+
+def watch_item_matches_entry(item, entry):
+    title = entry.get("title", "")
+    link = entry.get("link", "")
+
+    searchable_text = normalize(title + " " + link)
+    wanted_title = normalize(item.get("title", ""))
+
+    if not wanted_title:
+        return False
+
+    if wanted_title not in searchable_text:
+        return False
+
+    if item.get("year") and item["year"] not in searchable_text:
+        return False
+
+    return True
 
 
 def get_updates():
