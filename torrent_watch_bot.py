@@ -333,11 +333,23 @@ def check_feeds():
             feed = feedparser.parse(rss_url)
 
             for entry in feed.entries:
+
+                print(
+                    "Checking:",
+                    watch_item_display(item),
+                    "against",
+                    entry.get("title", "")
+                )
+            
                 if watch_item_matches_entry(item, entry):
+            
+                    print("MATCH FOUND:", watch_item_display(item))
+            
                     found_entry = {
                         "title": entry.get("title", ""),
                         "link": entry.get("link", "")
                     }
+            
                     break
 
             if found_entry:
