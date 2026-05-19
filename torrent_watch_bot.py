@@ -14,6 +14,8 @@ OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "")
 TRAKT_CLIENT_ID = os.environ.get("TRAKT_CLIENT_ID", "")
 TRAKT_USERNAME = os.environ.get("TRAKT_USERNAME", "")
 TRAKT_LIST_SLUG = os.environ.get("TRAKT_LIST_SLUG", "")
+TRAKT_ACCESS_TOKEN = os.environ.get("TRAKT_ACCESS_TOKEN", "")
+TRAKT_REFRESH_TOKEN = os.environ.get("TRAKT_REFRESH_TOKEN", "")
 
 WATCHLIST_FILE = "watchlist.json"
 SEEN_FILE = "seen_matches.json"
@@ -64,13 +66,17 @@ def normalize(text):
     return re.sub(r"[^a-z0-9]+", " ", str(text).lower()).strip()
 
 
-def trakt_headers():
-    return {
+def trakt_headers(authenticated=False):
+    headers = {
         "Content-Type": "application/json",
         "trakt-api-version": "2",
         "trakt-api-key": TRAKT_CLIENT_ID
     }
 
+    if authenticated and TRAKT_ACCESS_TOKEN:
+        headers["Authorization"] = f"Bearer {TRAKT_ACCESS_TOKEN}"
+
+    return headers
 
 def fetch_trakt_list_items():
     if not TRAKT_CLIENT_ID or not TRAKT_USERNAME or not TRAKT_LIST_SLUG:
@@ -91,6 +97,45 @@ def fetch_trakt_list_items():
     response.raise_for_status()
     return response.json()
 
+def remove_from_trakt_list(item):
+    trakt_id = item.get("trakt_id")
+
+    if not trakt_id:
+        return False
+
+    media_type = "movies"
+
+    if item.get("type") == "series":
+        media_type = "shows"
+
+    payload = {
+        media_type: [
+            {
+                "ids": {
+                    "trakt": trakt_id
+                }
+            }
+        ]
+    }
+
+    url = (
+        f"https://api.trakt.tv/users/{TRAKT_USERNAME}"
+        f"/lists/{TRAKT_LIST_SLUG}/items/remove"
+    )
+
+    response = requests.post(
+        url,
+        headers=trakt_headers(authenticated=True),
+        json=payload,
+        timeout=30
+    )
+
+    if response.status_code >= 400:
+        print("Failed removing from Trakt:", response.text)
+        return False
+
+    print("Removed from Trakt:", watch_item_display(item))
+    return True
 
 def trakt_item_to_watch_item(item):
     media_type = item.get("type")
@@ -305,6 +350,9 @@ def check_feeds():
             seen.append(already_notified_key)
             notified_keys.append(item_key)
             save_json(SEEN_FILE, seen)
+            
+            if item.get("source") == "trakt":
+                remove_from_trakt_list(item)
 
     if notified_keys:
         watchlist = [
