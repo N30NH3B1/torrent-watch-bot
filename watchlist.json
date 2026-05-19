@@ -10,5 +10,35 @@
     "title": "Lee Cronin's the Mummy",
     "year": "2026",
     "display": "Lee Cronin's the Mummy (2026)"
+  },
+  {
+    "source": "trakt",
+    "type": "movie",
+    "title": "Evil Dead Burn",
+    "year": "2026",
+    "imdb_id": "tt31170389",
+    "tmdb_id": 1212763,
+    "trakt_id": 977901,
+    "display": "Evil Dead Burn (2026)"
+  },
+  {
+    "source": "trakt",
+    "type": "movie",
+    "title": "Evil Dead Wrath",
+    "year": "2028",
+    "imdb_id": "tt32219574",
+    "tmdb_id": 1280608,
+    "trakt_id": 1040960,
+    "display": "Evil Dead Wrath (2028)"
+  },
+  {
+    "source": "trakt",
+    "type": "movie",
+    "title": "Paranormal Activity 8",
+    "year": "2027",
+    "imdb_id": "tt39104938",
+    "tmdb_id": 1592452,
+    "trakt_id": 1323390,
+    "display": "Paranormal Activity 8 (2027)"
   }
 ]
