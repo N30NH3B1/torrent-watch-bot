@@ -1,15 +1,23 @@
 [
   {
-    "imdb_id": "tt32093575",
+    "source": "trakt",
+    "type": "movie",
     "title": "Scary Movie",
     "year": "2026",
+    "imdb_id": "tt32093575",
+    "tmdb_id": 1273221,
+    "trakt_id": 1034092,
     "display": "Scary Movie (2026)"
   },
   {
-    "imdb_id": "tt32612507",
-    "title": "Lee Cronin's the Mummy",
+    "source": "trakt",
+    "type": "movie",
+    "title": "Lee Cronin's The Mummy",
     "year": "2026",
-    "display": "Lee Cronin's the Mummy (2026)"
+    "imdb_id": "tt32612507",
+    "tmdb_id": 1304313,
+    "trakt_id": 1063866,
+    "display": "Lee Cronin's The Mummy (2026)"
   },
   {
     "source": "trakt",
