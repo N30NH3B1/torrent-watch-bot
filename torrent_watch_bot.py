@@ -142,10 +142,10 @@ def watch_item_display(item):
 
 def sync_trakt_list_to_watchlist():
     watchlist = load_json(WATCHLIST_FILE, [])
-    existing_keys = {watch_item_key(item) for item in watchlist}
-
     trakt_items = fetch_trakt_list_items()
-    added = []
+
+    updated_watchlist = []
+    trakt_by_key = {}
 
     for trakt_item in trakt_items:
         watch_item = trakt_item_to_watch_item(trakt_item)
@@ -153,16 +153,37 @@ def sync_trakt_list_to_watchlist():
         if not watch_item:
             continue
 
-        key = watch_item_key(watch_item)
+        trakt_by_key[watch_item_key(watch_item)] = watch_item
 
-        if key not in existing_keys:
-            watchlist.append(watch_item)
-            existing_keys.add(key)
+    used_keys = set()
+    upgraded = []
+    added = []
+
+    for existing_item in watchlist:
+        existing_key = watch_item_key(existing_item)
+
+        if existing_key in trakt_by_key:
+            rich_item = trakt_by_key[existing_key]
+            updated_watchlist.append(rich_item)
+            used_keys.add(existing_key)
+
+            if existing_item != rich_item:
+                upgraded.append(watch_item_display(rich_item))
+        else:
+            updated_watchlist.append(existing_item)
+
+    for key, watch_item in trakt_by_key.items():
+        if key not in used_keys:
+            updated_watchlist.append(watch_item)
             added.append(watch_item_display(watch_item))
 
+    save_json(WATCHLIST_FILE, updated_watchlist)
+
     if added:
-        save_json(WATCHLIST_FILE, watchlist)
         print("Added from Trakt:", added)
+
+    if upgraded:
+        print("Upgraded from Trakt:", upgraded)
 
 
 def watch_item_matches_entry(item, entry):
