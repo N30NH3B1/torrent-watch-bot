@@ -58,5 +58,15 @@
     "tmdb_id": 426063,
     "trakt_id": 808857,
     "display": "Nosferatu (2024)"
+  },
+  {
+    "source": "trakt",
+    "type": "movie",
+    "title": "Night of the Living Dead",
+    "year": "1968",
+    "imdb_id": "tt0063350",
+    "tmdb_id": 10331,
+    "trakt_id": 5531,
+    "display": "Night of the Living Dead (1968)"
   }
 ]
