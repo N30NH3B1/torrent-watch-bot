@@ -36,4 +36,6 @@ jobs:
           TRAKT_CLIENT_SECRET: ${{ secrets.TRAKT_CLIENT_SECRET }}
           TRAKT_USERNAME: ${{ secrets.TRAKT_USERNAME }}
           TRAKT_LIST_SLUG: ${{ secrets.TRAKT_LIST_SLUG }}
+          TRAKT_ACCESS_TOKEN: ${{ secrets.TRAKT_ACCESS_TOKEN }}
+          TRAKT_REFRESH_TOKEN: ${{ secrets.TRAKT_REFRESH_TOKEN }}
         run: python torrent_watch_bot.py
