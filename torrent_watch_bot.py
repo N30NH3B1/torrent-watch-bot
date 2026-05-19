@@ -25,7 +25,11 @@ RSS_URLS = [
     "https://fosstorrents.com/feed/torrents.xml",
     "https://archive.org/services/collection-rss.php?collection=feature_films",
     "https://archive.org/services/collection-rss.php?collection=opensource_movies",
-    "https://archive.org/services/collection-rss.php?collection=community_video"
+    "https://archive.org/services/collection-rss.php?collection=community_video",
+    "https://4krss.nl",
+    "https://feed.animetosho.org/rss2?only_tor=1&filter%5B0%5D%5Bt%5D=nyaa_class&filter%5B0%5D%5Bv%5D=remake&aid=18290",
+    "https://fosstorrents.com/feed/torrents.xml",
+    "https://fosstorrents.com/feed/rss.xml"
 ]
 
 
