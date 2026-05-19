@@ -78,6 +78,7 @@ def trakt_headers(authenticated=False):
 
     return headers
 
+
 def fetch_trakt_list_items():
     if not TRAKT_CLIENT_ID or not TRAKT_USERNAME or not TRAKT_LIST_SLUG:
         print("Trakt config missing.")
@@ -97,10 +98,12 @@ def fetch_trakt_list_items():
     response.raise_for_status()
     return response.json()
 
+
 def remove_from_trakt_list(item):
     trakt_id = item.get("trakt_id")
 
     if not trakt_id:
+        print("Cannot remove from Trakt: missing trakt_id.")
         return False
 
     media_type = "movies"
@@ -120,10 +123,10 @@ def remove_from_trakt_list(item):
 
     url = (
         f"https://api.trakt.tv/users/{TRAKT_USERNAME}"
-        f"/lists/{TRAKT_LIST_SLUG}/items/remove"
+        f"/lists/{TRAKT_LIST_SLUG}/items"
     )
 
-    response = requests.post(
+    response = requests.delete(
         url,
         headers=trakt_headers(authenticated=True),
         json=payload,
@@ -131,11 +134,12 @@ def remove_from_trakt_list(item):
     )
 
     if response.status_code >= 400:
-        print("Failed removing from Trakt:", response.text)
+        print("Failed removing from Trakt:", response.status_code, response.text)
         return False
 
     print("Removed from Trakt:", watch_item_display(item))
     return True
+
 
 def trakt_item_to_watch_item(item):
     media_type = item.get("type")
@@ -350,7 +354,7 @@ def check_feeds():
             seen.append(already_notified_key)
             notified_keys.append(item_key)
             save_json(SEEN_FILE, seen)
-            
+
             if item.get("source") == "trakt":
                 remove_from_trakt_list(item)
 
