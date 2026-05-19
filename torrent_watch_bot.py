@@ -16,7 +16,30 @@ SEEN_FILE = "seen_matches.json"
 OFFSET_FILE = "telegram_offset.json"
 
 RSS_URLS = [
-    "https://fosstorrents.com/feed/torrents.xml"
+
+    # FOSS Torrents
+    "https://fosstorrents.com/feed/torrents.xml",
+
+    # Linux Tracker
+    "https://linuxtracker.org/rss.php",
+
+    # Internet Archive - Movies
+    "https://archive.org/services/collection-rss.php?collection=feature_films",
+
+    # Internet Archive - Open Source Media
+    "https://archive.org/services/collection-rss.php?collection=opensource_movies",
+
+    # Internet Archive - Community Video
+    "https://archive.org/services/collection-rss.php?collection=community_video",
+
+    # Public Domain Torrents
+    "https://www.publicdomaintorrents.info/index.xml",
+
+    # Etree (live music trading)
+    "https://bt.etree.org/rss/bt_etree_rss.xml",
+
+    # Academic / open datasets
+    "https://academictorrents.com/rss.php"
 ]
 
 
