@@ -48,5 +48,15 @@
     "tmdb_id": 1592452,
     "trakt_id": 1323390,
     "display": "Paranormal Activity 8 (2027)"
+  },
+  {
+    "source": "trakt",
+    "type": "movie",
+    "title": "Nosferatu",
+    "year": "2024",
+    "imdb_id": "tt5040012",
+    "tmdb_id": 426063,
+    "trakt_id": 808857,
+    "display": "Nosferatu (2024)"
   }
 ]
