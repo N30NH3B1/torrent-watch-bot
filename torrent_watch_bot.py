@@ -28,7 +28,6 @@ RSS_URLS = [
     "https://archive.org/services/collection-rss.php?collection=community_video",
     "https://4krss.nl",
     "https://feed.animetosho.org/rss2?only_tor=1&filter%5B0%5D%5Bt%5D=nyaa_class&filter%5B0%5D%5Bv%5D=remake&aid=18290",
-    "https://fosstorrents.com/feed/torrents.xml",
     "https://fosstorrents.com/feed/rss.xml",
     "http://www.btsone.cc/",
     "https://www.reddit.com/r/torrents/comments/6orv2a/rarbg_rss_feed/",
