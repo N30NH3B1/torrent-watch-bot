@@ -7,6 +7,7 @@
     "imdb_id": "tt32093575",
     "tmdb_id": 1273221,
     "trakt_id": 1034092,
+    "slug": "scary-movie-2026",
     "display": "Scary Movie (2026)"
   },
   {
@@ -17,6 +18,7 @@
     "imdb_id": "tt32612507",
     "tmdb_id": 1304313,
     "trakt_id": 1063866,
+    "slug": "lee-cronin-s-the-mummy-2026",
     "display": "Lee Cronin's The Mummy (2026)"
   },
   {
@@ -27,6 +29,7 @@
     "imdb_id": "tt31170389",
     "tmdb_id": 1212763,
     "trakt_id": 977901,
+    "slug": "evil-dead-burn-2026",
     "display": "Evil Dead Burn (2026)"
   },
   {
@@ -37,6 +40,7 @@
     "imdb_id": "tt32219574",
     "tmdb_id": 1280608,
     "trakt_id": 1040960,
+    "slug": "evil-dead-wrath-2028",
     "display": "Evil Dead Wrath (2028)"
   },
   {
@@ -47,6 +51,7 @@
     "imdb_id": "tt39104938",
     "tmdb_id": 1592452,
     "trakt_id": 1323390,
+    "slug": "paranormal-activity-8-2027",
     "display": "Paranormal Activity 8 (2027)"
   },
   {
@@ -57,6 +62,7 @@
     "imdb_id": "tt5040012",
     "tmdb_id": 426063,
     "trakt_id": 808857,
+    "slug": "nosferatu-2024",
     "display": "Nosferatu (2024)"
   },
   {
@@ -67,6 +73,7 @@
     "imdb_id": "tt0063350",
     "tmdb_id": 10331,
     "trakt_id": 5531,
+    "slug": "night-of-the-living-dead-1968",
     "display": "Night of the Living Dead (1968)"
   }
 ]
